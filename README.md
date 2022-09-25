@@ -1,4 +1,5 @@
 # dota-camera-changer
+*Replace your Dota 2 icon by this app to completely forget about manually changing camera distance.*
 ## About
 This application:
 1. Locates client.dll file in your Dota folder.
@@ -7,7 +8,7 @@ This application:
 
 > At first launch you will be prompted to enter the required camera distance. With further launches this app will run Dota with distance you have set initially. You can always change your mind by deleting config.ini generated at the location of the script.
 
-> Replace your Dota 2 icon by this app to completely forget about manually changing camera distance.
+
 ## Executing
 1. Run ```python main.py```, if you have python installed on your system.
 2. Build your own exe file to run on systems without python installed using 
