@@ -18,3 +18,6 @@ https://stackoverflow.com/questions/58388230/how-to-read-the-steam-install-path-
 Computer\HKEY_LOCAL_MACHINE\SOFTWARE\WOW6432Node\Valve\Steam\InstallPath
 
 Steam/steamapps/libraryfolders.vdf
+
+
+pyinstaller --noconfirm --onefile --console --clean --icon dota_icon.ico main.py

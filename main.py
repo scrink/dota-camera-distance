@@ -4,6 +4,7 @@ import os
 import vdf
 from time import sleep
 import winreg
+import traceback
 
 DOTA_APP_ID = "570"
 SEARCH_VALUE = "00 40 9C 44 00 80 A2 44 00 80 B4 44"
@@ -46,7 +47,7 @@ def main():
                     library_folders[key]["path"] + CLIENT_DLL_DEFAULT_PATH
                 )
 
-        print(f"cliend_dll_path: {changer_cfg['client_dll_path']}")
+        print(f"client_dll_path: {changer_cfg['client_dll_path']}")
 
     with open(cwd + "\\config.ini", "w") as configfile:
         config.write(configfile)
@@ -74,10 +75,14 @@ def main():
 
     os.startfile("steam://rungameid/570")  # windows only
     print("SUCCESS")
-    for i in range(5, 0, -1):
-        print(f"Exit in: {i}", end="\r")
-        sleep(1)
 
 
 if __name__ == "__main__":
-    main()
+    try:
+        main()
+    except Exception:
+        traceback.print_exc()
+    finally:
+        for i in range(5, 0, -1):
+            print(f"Exit in: {i}", end="\r")
+            sleep(1)
