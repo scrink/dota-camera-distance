@@ -1,7 +1,7 @@
 # dota-camera-distance
 *Replace your Dota 2 icon by this app to completely forget about manually changing camera distance.*
 ## Abstract
-These days people use a hex-editor (such as [HxD](https://mh-nexus.de/en/hxd/)) to increase camera distance by editing some hex-value in ```client.dll``` file inside Dota 2 folder. However, the value gets reset every time the game gets an update, even a small one(bug fixes, etc.). This app if for making life easier by not having to manually do this every day(Dota gets updates almost every single day).
+These days people use a hex-editor (such as [HxD](https://mh-nexus.de/en/hxd/)) to increase camera distance by editing some hex-value in ```client.dll``` file inside Dota 2 folder. However, the value gets reset every time the game gets an update, even a small one(bug fixes, etc.). This app is for making life easier by not having to manually do this every day(Dota gets updates almost every single day).
 ## App Description
 This application:
 1. Automatically locates your Dota 2 folder and finds ```client.dll``` file
