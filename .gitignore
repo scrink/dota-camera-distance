@@ -131,3 +131,4 @@ dmypy.json
 # changer
 *.dll
 *.vdf
+*.acf
