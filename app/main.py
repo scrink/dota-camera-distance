@@ -38,9 +38,6 @@ def set_distance(changer_cfg):
     with open(changer_cfg["client_dll_path"], "wb") as f:
         f.write(bytes.fromhex(hexdata))
 
-    os.startfile("steam://rungameid/570")  # windows only
-    print("Launching Dota 2 ...")
-
 
 def main():
     cwd = os.getcwd()
@@ -90,6 +87,8 @@ def main():
         print("Updated: config.ini")
 
     set_distance(changer_cfg)
+    os.startfile("steam://rungameid/{DOTA_APP_ID}")  # windows only
+    print("Launching Dota 2 ...")
 
     app_manifest = vdf.load(open(changer_cfg["steam_library_path"] + APP_MANIFEST_PATH))
     app_status = app_manifest["AppState"]["StateFlags"]
@@ -103,6 +102,7 @@ def main():
             app_status = app_manifest["AppState"]["StateFlags"]
         print()
         set_distance(changer_cfg)
+        print('Press "Play game"')
 
 
 if __name__ == "__main__":
@@ -110,6 +110,10 @@ if __name__ == "__main__":
         main()
     except Exception:
         traceback.print_exc()
+        print(
+            "Program crashed, send me a screenshot and config.ini "
+            + "contents via https://github.com/searayeah/dota-camera-distance/issues"
+        )
     finally:
         for i in range(5, 0, -1):
             print(f"Exit in: {i}", end="\r")
