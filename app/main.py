@@ -87,7 +87,7 @@ def main():
         print("Updated: config.ini")
 
     set_distance(changer_cfg)
-    os.startfile("steam://rungameid/{DOTA_APP_ID}")  # windows only
+    os.startfile(f"steam://rungameid/{DOTA_APP_ID}")  # windows only
     print("Launching Dota 2 ...")
 
     app_manifest = vdf.load(open(changer_cfg["steam_library_path"] + APP_MANIFEST_PATH))
