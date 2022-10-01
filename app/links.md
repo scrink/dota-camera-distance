@@ -19,3 +19,7 @@ Computer\HKEY_LOCAL_MACHINE\SOFTWARE\WOW6432Node\Valve\Steam\InstallPath
 00 00 96 44 00 40 9C 44 00 80 A2 44 00 80 B4 44
 
 Steam/steamapps/libraryfolders.vdf
+
+https://steamcommunity.com/sharedfiles/filedetails/?id=885555151
+
+https://github.com/lutris/lutris/blob/master/docs/steam.rst
