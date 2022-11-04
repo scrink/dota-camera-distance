@@ -1,4 +1,6 @@
 # [7.32c]dota-camera-distance
+## I will update the app tonight, as for now(Diretide update) use HxD and search for ```00 00 96 44 00 00 E1 44```
+
 *Replace your Dota 2 icon by this app to completely forget about manually changing camera distance.*
 
 [Download latest version](https://github.com/searayeah/dota-camera-distance/releases/download/3.1/dota-camera-distance.exe)
