@@ -1,13 +1,14 @@
-import struct
 import configparser
 import os
-import vdf
+import re
+import struct
 import time
-import winreg
 import traceback
+import winreg
+import vdf
 
 DOTA_APP_ID = "570"
-SEARCH_VALUE = "00 00 96 44 00 40 9C 44 00 80 A2 44 00 80 B4 44"
+SEARCH_HEX_STRING = "00 00 00 00 00 00 2E 40 00 00 96 44 00 00 E1 44"
 DEFAULT_DISTANCE = "1200"
 STEAM_REGISTRY_KEY = "SOFTWARE\\WOW6432Node\\Valve\\Steam"
 CLIENT_DLL_DEFAULT_PATH = (
@@ -17,91 +18,152 @@ LIBRARY_FOLDERS_PATH = "\\steamapps\\libraryfolders.vdf"
 APP_MANIFEST_PATH = f"\\steamapps\\appmanifest_{DOTA_APP_ID}.acf"
 
 
-def set_distance(changer_cfg):
-    search_value = changer_cfg["search_value"].lower().replace(" ", "")[8:]
-    hex_distance = struct.pack("f", float(changer_cfg["distance"])).hex()
+def set_distance(search_hex_string, distance, client_dll_path):
+    search_hex_string = search_hex_string.lower().replace(" ", "")
+    default_distance_hex = struct.pack("f", float(DEFAULT_DISTANCE)).hex()
+    distance_hex = struct.pack("f", float(distance)).hex()
 
-    with open(changer_cfg["client_dll_path"], "rb") as f:
-        hexdata = f.read().hex()
-        camera_hex_index = hexdata.find(search_value)
-        if camera_hex_index == -1:
-            raise Exception("It seems that Valve have changed camera hex code")
+    # should always be 8, so this might be unnecessary
+    distance_hex_length = len(distance_hex)
 
-        print(f"Old value: {hexdata[camera_hex_index -8 :camera_hex_index]}")
-        hexdata = (
-            hexdata[0 : camera_hex_index - 8]
-            + hex_distance
-            + hexdata[camera_hex_index:]
+    # finding the location of default distance(00 00 96 44 = 1200) in search hex line
+    distance_index = search_hex_string.find(default_distance_hex)
+
+    # regex string that is invulnerable to distance changes
+    search_hex_string_regex = re.compile(
+        search_hex_string[:distance_index]
+        + f"\w{{{distance_hex_length}}}"  # regex \w{8} means any 8 characters [a-zA-Z0-9_]
+        + search_hex_string[distance_index + distance_hex_length :]
+    )
+
+    distance_hex_string = (
+        search_hex_string[:distance_index]
+        + distance_hex
+        + search_hex_string[distance_index + distance_hex_length :]
+    )
+
+    with open(client_dll_path, "rb") as f:
+        client_dll_hex = f.read().hex()
+
+    client_dll_hex_new, changes_count = re.subn(
+        search_hex_string_regex, distance_hex_string, client_dll_hex, 1
+    )
+
+    if changes_count == 0:
+        raise Exception(
+            "Couldn't find the hex value in client.dll file. Valve might have changed it."
         )
-        print(f"New value: {hexdata[camera_hex_index-8:camera_hex_index]}")
 
-    with open(changer_cfg["client_dll_path"], "wb") as f:
-        f.write(bytes.fromhex(hexdata))
+    print(f"Old: {re.search(search_hex_string_regex, client_dll_hex).group()}")
+    print(f"New: {re.search(search_hex_string_regex, client_dll_hex_new).group()}")
+
+    with open(client_dll_path, "wb") as f:
+        f.write(bytes.fromhex(client_dll_hex_new))
 
 
-def main():
-    cwd = os.getcwd()
-    config = configparser.ConfigParser()
-    config.read(cwd + "\\config.ini")
+def get_steam_path():
+    # Getting steam path from Windows Registry
+    hkey = winreg.OpenKey(winreg.HKEY_LOCAL_MACHINE, STEAM_REGISTRY_KEY)
+    steam_path = winreg.QueryValueEx(hkey, "InstallPath")[0]
+    winreg.CloseKey(hkey)
+    return steam_path
 
-    if "DOTA-CAMERA-DISTANCE" not in config:
-        config["DOTA-CAMERA-DISTANCE"] = {}
 
-    changer_cfg = config["DOTA-CAMERA-DISTANCE"]
+def get_steam_library_path(steam_path):
+    # Finding steam path is not enough,
+    # As Dota 2 can be installed on different drive
+    library_folders = vdf.load(open(steam_path + LIBRARY_FOLDERS_PATH))[
+        "libraryfolders"
+    ]
+    for key in library_folders:
+        if str(DOTA_APP_ID) in library_folders[key]["apps"]:
+            return library_folders[key]["path"]
 
-    if "search_value" not in changer_cfg or not changer_cfg["search_value"]:
-        changer_cfg["search_value"] = SEARCH_VALUE
-    print(f"Search value: {changer_cfg['search_value']}")
 
-    if "distance" not in changer_cfg or not changer_cfg["distance"]:
-        changer_cfg["distance"] = (
-            input("Enter distance[default 1200, recommended 1400]: ")
-            or DEFAULT_DISTANCE
-        )
-    print(f"Distance: {changer_cfg['distance']}")
-
-    if "steam_path" not in changer_cfg or not changer_cfg["steam_path"]:
-        hkey = winreg.OpenKey(winreg.HKEY_LOCAL_MACHINE, STEAM_REGISTRY_KEY)
-        steam_path = winreg.QueryValueEx(hkey, "InstallPath")[0]
-        winreg.CloseKey(hkey)
-        changer_cfg["steam_path"] = steam_path
-    print(f"Steam path: {changer_cfg['steam_path']}")
-
-    if "steam_library_path" not in changer_cfg or not changer_cfg["steam_library_path"]:
-        library_folders = vdf.load(
-            open(changer_cfg["steam_path"] + LIBRARY_FOLDERS_PATH)
-        )["libraryfolders"]
-        for key in library_folders:
-            if str(DOTA_APP_ID) in library_folders[key]["apps"]:
-                changer_cfg["steam_library_path"] = library_folders[key]["path"]
-    print(f"Steam library path: {changer_cfg['steam_library_path']}")
-
-    if "client_dll_path" not in changer_cfg or not changer_cfg["client_dll_path"]:
-        changer_cfg["client_dll_path"] = (
-            changer_cfg["steam_library_path"] + CLIENT_DLL_DEFAULT_PATH
-        )
-    print(f"Client.dll path: {changer_cfg['client_dll_path']}")
-
-    with open(cwd + "\\config.ini", "w") as configfile:
-        config.write(configfile)
-        print("Updated: config.ini")
-
-    set_distance(changer_cfg)
-    os.startfile(f"steam://rungameid/{DOTA_APP_ID}")  # windows only
-    print("Launching Dota 2 ...")
-
-    app_manifest = vdf.load(open(changer_cfg["steam_library_path"] + APP_MANIFEST_PATH))
+def dota_was_updating(steam_library_path):
+    # Dota 2 update status are stored in app_manifest file
+    # If status is '4' that means that Dota is updated and ready to launch
+    # Otherwise, it is needed to wait for it to end its updates
+    app_manifest = vdf.load(open(steam_library_path + APP_MANIFEST_PATH))
     app_status = app_manifest["AppState"]["StateFlags"]
     if app_status != "4":
         while app_status != "4":
             print(f"Waiting for Dota 2 to get updates, status: {app_status}", end="\r")
-            time.sleep(3)
-            app_manifest = vdf.load(
-                open(changer_cfg["steam_library_path"] + APP_MANIFEST_PATH)
-            )
+            time.sleep(1)
+            app_manifest = vdf.load(open(steam_library_path + APP_MANIFEST_PATH))
             app_status = app_manifest["AppState"]["StateFlags"]
         print()
-        set_distance(changer_cfg)
+        return True
+    else:
+        return False
+
+
+def set_config():
+    cwd = os.getcwd()
+    config_file = configparser.ConfigParser()
+    config_file.read(cwd + "\\config.ini")
+
+    if "DOTA-CAMERA-DISTANCE" not in config_file:
+        config_file["DOTA-CAMERA-DISTANCE"] = {}
+
+    config = config_file["DOTA-CAMERA-DISTANCE"]
+
+    if "search_hex_string" not in config or not config["search_hex_string"]:
+        config["search_hex_string"] = SEARCH_HEX_STRING
+    print(f"Search value: {config['search_hex_string']}")
+
+    if "distance" not in config or not config["distance"]:
+        config["distance"] = (
+            input("Enter distance[default 1200, recommended 1400]: ")
+            or DEFAULT_DISTANCE
+        )
+    print(f"Distance: {config['distance']}")
+
+    if "steam_path" not in config or not config["steam_path"]:
+        config["steam_path"] = get_steam_path()
+    print(f"Steam path: {config['steam_path']}")
+
+    if "steam_library_path" not in config or not config["steam_library_path"]:
+        config["steam_library_path"] = get_steam_library_path(config["steam_path"])
+    print(f"Steam library path: {config['steam_library_path']}")
+
+    if "client_dll_path" not in config or not config["client_dll_path"]:
+        config["client_dll_path"] = (
+            config["steam_library_path"] + CLIENT_DLL_DEFAULT_PATH
+        )
+    print(f"Client.dll path: {config['client_dll_path']}")
+
+    with open(cwd + "\\config.ini", "w") as configfile:
+        config_file.write(configfile)
+    print("Updated: config.ini")
+
+    return (
+        config["search_hex_string"],
+        config["distance"],
+        config["steam_path"],
+        config["steam_library_path"],
+        config["client_dll_path"],
+    )
+
+
+def main():
+
+    (
+        search_hex_string,
+        distance,
+        steam_path,
+        steam_library_path,
+        client_dll_path,
+    ) = set_config()
+
+    set_distance(search_hex_string, distance, client_dll_path)
+    os.startfile(f"steam://rungameid/{DOTA_APP_ID}")  # windows only
+    print("Launching Dota 2 ...")
+
+    # When launching Dota for the first time it might get updates,
+    # so client.dll needs to be rewritten again
+    if dota_was_updating(steam_library_path):
+        set_distance(search_hex_string, distance, client_dll_path)
         print('Press "Play game"')
 
 
@@ -111,8 +173,8 @@ if __name__ == "__main__":
     except Exception:
         traceback.print_exc()
         print(
-            "Program crashed, send me a screenshot and config.ini "
-            + "contents via https://github.com/searayeah/dota-camera-distance/issues"
+            "Program crashed, send me a screenshot via "
+            + "https://github.com/searayeah/dota-camera-distance/issues"
         )
     finally:
         for i in range(5, 0, -1):
