@@ -6,14 +6,14 @@ import time
 import traceback
 import winreg
 import vdf
+import requests
 
 DOTA_APP_ID = "570"
-SEARCH_HEX_STRING = "00 00 00 00 00 00 2E 40 00 00 96 44 00 00 E1 44"
+DEFAULT_SEARCH_HEX_STRING = "00 00 00 00 00 00 2E 40 00 00 96 44 00 00 E1 44"
+SERVER_SEARCH_HEX_STRING_LINK = "https://raw.githubusercontent.com/searayeah/dota-camera-distance/main/current_hex_string"
 DEFAULT_DISTANCE = "1200"
 STEAM_REGISTRY_KEY = "SOFTWARE\\WOW6432Node\\Valve\\Steam"
-CLIENT_DLL_DEFAULT_PATH = (
-    "\\steamapps\\common\\dota 2 beta\\game\\dota\\bin\\win64\\client.dll"
-)
+CLIENT_DLL_PATH = "\\steamapps\\common\\dota 2 beta\\game\\dota\\bin\\win64\\client.dll"
 LIBRARY_FOLDERS_PATH = "\\steamapps\\libraryfolders.vdf"
 APP_MANIFEST_PATH = f"\\steamapps\\appmanifest_{DOTA_APP_ID}.acf"
 
@@ -70,8 +70,8 @@ def get_steam_path():
 
 
 def get_steam_library_path(steam_path):
-    # Finding steam path is not enough,
-    # As Dota 2 can be installed on different drive
+    # Getting steam library path,
+    # as Dota 2 can be installed on different drive
     library_folders = vdf.load(open(steam_path + LIBRARY_FOLDERS_PATH))[
         "libraryfolders"
     ]
@@ -98,19 +98,46 @@ def dota_was_updating(steam_library_path):
         return False
 
 
+def get_current_hex_string():
+    try:
+        response = requests.get(SERVER_SEARCH_HEX_STRING_LINK)
+        response.raise_for_status()
+        print("String received from GitHub")
+        return response.text
+    except requests.exceptions.RequestException as e:
+        print(e)
+        print("Couldn't receive string from GitHub, using the default one")
+        return DEFAULT_SEARCH_HEX_STRING
+
+
 def set_config():
-    cwd = os.getcwd()
+    config_path = os.path.join(os.getcwd(), "config.ini")
     config_file = configparser.ConfigParser()
-    config_file.read(cwd + "\\config.ini")
+    config_file.read(config_path)
 
     if "DOTA-CAMERA-DISTANCE" not in config_file:
         config_file["DOTA-CAMERA-DISTANCE"] = {}
 
     config = config_file["DOTA-CAMERA-DISTANCE"]
 
-    if "search_hex_string" not in config or not config["search_hex_string"]:
-        config["search_hex_string"] = SEARCH_HEX_STRING
-    print(f"Search value: {config['search_hex_string']}")
+    if "receive_type" not in config or not config["receive_type"]:
+        config[
+            '# "auto"'
+        ] = 'automatically get string, "manual" = set the string manually'
+        config["receive_type"] = "auto"
+    print(f"Receive type: {config['receive_type']}")
+
+    # I will update the string through github current_hex_string file
+    # but if you obtained the new string faster than me, you can
+    # set this config variable to "manual", set your manual string, and the program won't update it
+    # automatically every time you launch it.
+    if (
+        (config["receive_type"].lower() == "auto")
+        or "search_hex_string" not in config
+        or not config["search_hex_string"]
+    ):
+        config["search_hex_string"] = get_current_hex_string()
+    print(f"Search hex string: {config['search_hex_string']}")
 
     if "distance" not in config or not config["distance"]:
         config["distance"] = (
@@ -128,16 +155,15 @@ def set_config():
     print(f"Steam library path: {config['steam_library_path']}")
 
     if "client_dll_path" not in config or not config["client_dll_path"]:
-        config["client_dll_path"] = (
-            config["steam_library_path"] + CLIENT_DLL_DEFAULT_PATH
-        )
+        config["client_dll_path"] = config["steam_library_path"] + CLIENT_DLL_PATH
     print(f"Client.dll path: {config['client_dll_path']}")
 
-    with open(cwd + "\\config.ini", "w") as configfile:
+    with open(config_path, "w") as configfile:
         config_file.write(configfile)
-    print("Updated: config.ini")
+    print(f"Updated {config_path}")
 
     return (
+        config["receive_type"],
         config["search_hex_string"],
         config["distance"],
         config["steam_path"],
@@ -147,8 +173,8 @@ def set_config():
 
 
 def main():
-
     (
+        receive_type,
         search_hex_string,
         distance,
         steam_path,

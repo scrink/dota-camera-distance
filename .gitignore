@@ -128,7 +128,7 @@ dmypy.json
 # Pyre type checker
 .pyre/
 
-# changer
+# dota-camera-distance
 *.dll
 *.vdf
 *.acf
