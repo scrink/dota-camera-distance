@@ -10,7 +10,7 @@ import requests
 
 DOTA_APP_ID = "570"
 DEFAULT_SEARCH_HEX_STRING = "00 00 00 00 00 00 2E 40 00 00 96 44 00 00 E1 44"
-SERVER_SEARCH_HEX_STRING_LINK = "https://raw.githubusercontent.com/searayeah/dota-camera-distance/online-hex-code-update/current_hex_string"
+SERVER_SEARCH_HEX_STRING_LINK = "https://raw.githubusercontent.com/searayeah/dota-camera-distance/main/current_hex_string"
 DEFAULT_DISTANCE = "1200"
 STEAM_REGISTRY_KEY = "SOFTWARE\\WOW6432Node\\Valve\\Steam"
 CLIENT_DLL_PATH = "\\steamapps\\common\\dota 2 beta\\game\\dota\\bin\\win64\\client.dll"
